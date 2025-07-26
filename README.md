@@ -1,5 +1,6 @@
 - 项目概述
-基于DeepUplift框架，扩展了多treatment训练支持及特征选择、embedding等模块，支持以下模型：
+基于https://github.com/Zhuang-Zhuang-Liu/DeepUplift/tree/main，
+扩展了多treatment训练支持及特征选择、embedding等模块，支持以下模型：
   - T-learner（已实现）
   - S-learner（已实现）
   - Tarnet（已实现）
@@ -10,3 +11,6 @@
     - `0`表示控制组
     - `1, 2, ..., n`表示不同treatment组
 示例：`treatment_label_list=[0,1,2,3]`
+  - 模型会直接输出ITE,前序传播输出的第一个参数即为ITE,使用list存储，每一个索引位置对应treatment_label_list中索引相应的treatment的预估lift
+
+  
