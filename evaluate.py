@@ -138,12 +138,14 @@ def get_qini(
 
     return qini
 
-def evaluate(df=None,y_true=None,uplift_predictions=None,treatment=None,divide_feature=None):
+def evaluate(df=None,y_true=None,uplift_predictions=None,treatment=None,divide_feature=None,n=100):
     if divide_feature is None:
         sm_qini_auc_score_model = get_qini(df,outcome_col=y_true,treatment_col=treatment)
-        print(sm_qini_auc_score_model.sum(axis=0))
+        print('qini结果:')
+        print(sm_qini_auc_score_model.sum(axis=0).sort_values(ascending=False))
 
-        plot_qini(df,outcome_col=y_true,treatment_col=treatment,n=100)
+        plot_qini(df,outcome_col=y_true,treatment_col=treatment,n=n)
+
      
     else:
         divide_features = sorted(df[divide_feature].unique().tolist())
@@ -156,10 +158,10 @@ def evaluate(df=None,y_true=None,uplift_predictions=None,treatment=None,divide_f
             del df_tmp[divide_feature]
             
             sm_qini_auc_score_model = get_qini(df_tmp,outcome_col=y_true,treatment_col=treatment)
-            print(sm_qini_auc_score_model.sum(axis=0))
-            plot_qini(df,outcome_col=y_true,treatment_col=treatment,n=100)
+            print(sm_qini_auc_score_model.sum(axis=0).sort_values(ascending=False))
+            plot_qini(df,outcome_col=y_true,treatment_col=treatment,n=n)
             print('---------------------------------')
-            model_res.append(sm_qini_auc_score_model.sum(axis=0)) 
+            model_res.append(sm_qini_auc_score_model.sum(axis=0).sort_values(ascending=False)) 
         
         df = pd.DataFrame(model_res)
         mean_series = df.mean()

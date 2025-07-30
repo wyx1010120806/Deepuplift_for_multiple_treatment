@@ -78,7 +78,7 @@ class BaseModel(nn.Module):
 
                 self.train_dataloader = DataLoader(TensorDataset(X_train, t_train, y_train, X_train_discrete, X_train_continuous), batch_size=batch_size, num_workers=num_workers, pin_memory=pin_memory,shuffle=False)
                 self.valid_dataloader = DataLoader(TensorDataset(X_test, t_test, y_test, X_test_discrete, X_test_continuous), batch_size=batch_size, num_workers=num_workers, pin_memory=pin_memory,shuffle=False)
-                print("预计单epoch训练步数:",int(df_train.shape,df_train.shape[0]/batch_size))
+                print("预计单epoch训练步数:",int(df_train.shape[0]/batch_size))
             else:
                 X_discrete = torch.tensor(df[discrete_cols].values, dtype=torch.float32)
                 X_continuous = torch.tensor(df[continuous_cols].values, dtype=torch.float32)
@@ -89,7 +89,7 @@ class BaseModel(nn.Module):
                 dataset = TensorDataset(X, t, y,X_discrete,X_continuous)
                 
                 self.train_dataloader = DataLoader(dataset, batch_size=batch_size, num_workers=num_workers, pin_memory=pin_memory,shuffle=False)
-                print("预计单epoch训练步数:",int(df.shape,df.shape[0]/batch_size))
+                print("预计单epoch训练步数:",int(df.shape[0]/batch_size))
 
     def fit(self, df,feature_list,discrete_cols,batch_size=64, epochs=10,
             learning_rate=1e-5,uplift_loss_f=None,loss_f=None,loss_f_eps=(), tensorboard=False,num_workers=4,pin_memory=True,task=None,device=None, valid_perc=False,label_y=None,label_treatment=None,loss_type=None,classi_nums=2, treatment_label_list=None,checkpoint_path=None,if_continued_train=0
