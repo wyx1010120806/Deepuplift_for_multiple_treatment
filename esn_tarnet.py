@@ -91,7 +91,7 @@ class ESN_Tarnet(BaseModel):
             # print(f'ipw_score{ipw_score}')
             pre.append(predcit_pro*ipw_score)
             if treatment_label != 0:
-                ate.append(predcit_pro/ipw_score -base_predcit_pro/base_ipw)
+                ate.append(predcit_pro -base_predcit_pro)
         pre.append(ipw)
         return ate,pre,None
 
