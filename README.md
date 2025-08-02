@@ -6,7 +6,7 @@
   - X-learner（已实现）
   - Tarnet（已实现）
   - ESN+Tarnet（已实现）
-  - DESCN（待实现）
+  - DESCN（已实现）
 - 使用注意事项
   - 模型初始化：必须传入`treatment_label_list`参数（类型为`list`），用于定义treatment标签。其中：
     - `0`表示控制组
