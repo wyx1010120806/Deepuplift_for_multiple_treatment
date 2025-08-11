@@ -50,7 +50,7 @@ class Tlearner(BaseModel):
             pre.append(predcit_pro)
             if treatment_label != 0:
                 ate.append(predcit_pro -base_predcit_pro)
-        return ate,pre,None
+        return torch.cat(ate, dim=1),pre,None
 
 def tlearn_loss(y_preds,t, y_true,task='regression',loss_type=None,classi_nums=2, treatment_label_list=None):
     if task is None:

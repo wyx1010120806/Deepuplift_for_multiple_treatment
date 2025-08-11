@@ -126,7 +126,7 @@ class Descn(BaseModel):
         # pre [(batch_size,1),(batch_size,1),...]
         # pseudo [[(batch_size,1),(batch_size,1)],...]
         # ipw (batch_size,treatment_nums)
-        return ite,[pre,pseudo,ipw],None
+        return torch.cat(ite, dim=1),[pre,pseudo,ipw],None
 
 def descn_loss(y_preds,t, y_true,task='classification',loss_type=None,classi_nums=2, treatment_label_list=None):
     if task is None:

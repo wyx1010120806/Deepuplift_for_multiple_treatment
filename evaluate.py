@@ -4,6 +4,7 @@ import numpy as np
 from sklift.metrics import qini_auc_score,uplift_at_k
 from sklearn.metrics import roc_auc_score
 import torch
+import shap
 import random
 from causalml.metrics import qini_score,plot_qini
 import pandas as pd
@@ -12,6 +13,20 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.metrics import roc_auc_score, confusion_matrix, roc_curve
 
+
+class MyModelWrapper(torch.nn.Module):
+        def __init__(self, model, feature_list_discrete, device, treatment):
+            super().__init__()
+            self.model = model
+            self.feature_list_discrete = feature_list_discrete
+            self.device = device
+            self.treatment = treatment
+        def forward(self, X):
+            X_discrete = X[:, :len(self.feature_list_discrete)]
+            X_continuous = X[:, len(self.feature_list_discrete):]
+            self.model.eval()
+            uplift_predictions, y_preds, *eps = self.model(None, None, X_discrete=X_discrete, X_continuous=X_continuous)
+            return uplift_predictions[:,self.treatment-1].unsqueeze(1)
 
 def set_seed(seed):
         random.seed(seed)
@@ -166,4 +181,18 @@ def evaluate(df=None,y_true=None,uplift_predictions=None,treatment=None,divide_f
         df = pd.DataFrame(model_res)
         mean_series = df.mean()
         print(f'平均结果:{mean_series}')
-            
+
+def feature_importance_with_shap(model,df_train,df_test,feature_list,feature_list_discrete,device,treatment):
+    X_train = df_train[feature_list_discrete + [_ for _ in feature_list if _ not in feature_list_discrete]].values
+    X_test = df_test[feature_list_discrete + [_ for _ in feature_list if _ not in feature_list_discrete]].values
+
+    my_model = MyModelWrapper(model, feature_list_discrete, device, treatment)
+    background = torch.tensor(X_train, dtype=torch.float32)
+    explainer = shap.GradientExplainer(my_model, background)
+    shap_values = explainer.shap_values(torch.tensor(X_test, dtype=torch.float32))
+    shap.summary_plot(
+        shap_values,         # 解释结果
+        X_test,              # 原始输入数据
+        feature_names=feature_list  # 可选：特征名
+    )
+    

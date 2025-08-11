@@ -100,7 +100,7 @@ class Xlearner(BaseModel):
                     base = self.treatment_uplift_model['0_' + str(self.treatment_label_list[i])](x).squeeze().unsqueeze(1)
                     ate.append(self.lift_weight[0]*base + self.lift_weight[i]*exp)
                     
-        return ate,[y_preds,uplift_preds],None
+        return torch.cat(ate, dim=1),[y_preds,uplift_preds],None
 
 def xlearn_loss(y_preds,t, y_true,task='regression',loss_type=None,classi_nums=2, treatment_label_list=None):
     if task is None:
