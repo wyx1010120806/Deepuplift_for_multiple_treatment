@@ -62,7 +62,7 @@ class Slearner(BaseModel):
 
         return torch.cat(ate, dim=1),predcit_pro,None
 
-def slearn_loss(y_preds,t, y_true,task='regression',loss_type=None,classi_nums=2, treatment_label_list=None):
+def slearn_loss(y_preds,t, y_true,task='regression',loss_type=None,classi_nums=2, treatment_label_list=None,X_true=None):
     if task is None:
         raise ValueError("task must be 'classification' or 'regression'")
 

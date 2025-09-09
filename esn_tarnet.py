@@ -95,7 +95,7 @@ class ESN_Tarnet(BaseModel):
         pre.append(ipw)
         return torch.cat(ate, dim=1),pre,None
 
-def esn_tarnet_loss(y_preds,t, y_true,task='classification',loss_type=None,classi_nums=2, treatment_label_list=None):
+def esn_tarnet_loss(y_preds,t, y_true,task='classification',loss_type=None,classi_nums=2, treatment_label_list=None,X_true=None):
     if task is None:
         raise ValueError("task must be 'classification'")
 

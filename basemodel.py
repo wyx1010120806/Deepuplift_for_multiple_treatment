@@ -67,6 +67,7 @@ class BaseModel(nn.Module):
                 X_train_discrete = torch.tensor(df_train[discrete_cols].values, dtype=torch.float32)
                 X_train_continuous = torch.tensor(df_train[continuous_cols].values, dtype=torch.float32)
                 t_train = torch.tensor(df_train[label_treatment].values, dtype=torch.float32).unsqueeze(1)
+                print(df_train[label_y].values)
                 y_train = torch.tensor(df_train[label_y].values, dtype=torch.float32).unsqueeze(1)
                 X_train = torch.cat((X_train_continuous, X_train_discrete), dim=1) 
 
@@ -139,7 +140,7 @@ class BaseModel(nn.Module):
 
                 # print(f"back time: {time.time() - start:.4f}s")
                 # start_time = time.time()
-                loss, loss_control, loss_treat = loss_f(y_preds,tr, y1,task,loss_type,classi_nums, treatment_label_list)
+                loss, loss_control, loss_treat = loss_f(y_preds,tr, y1,task,loss_type,classi_nums, treatment_label_list,eps[0])
                 # end_time = time.time()
                 # print(f"epoch time: {end_time - start_time:.4f}s")
         
@@ -176,7 +177,7 @@ class BaseModel(nn.Module):
                     
                     t_pred,y_preds,*eps = self.predict(X_valid,tr_valid,device,X_discrete_valid, X_continuous_valid)
 
-                    loss, outcome_loss, treatment_loss = loss_f(y_preds,tr_valid, y1_valid,task,loss_type,classi_nums, treatment_label_list)
+                    loss, outcome_loss, treatment_loss = loss_f(y_preds,tr_valid, y1_valid,task,loss_type,classi_nums, treatment_label_list,eps[0])
                     if uplift_loss_f:
                         treatment_loss = uplift_loss_f(t_pred, y_preds,tr_valid, y1_valid, *loss_f_eps)
                         treatment_valid.append(treatment_loss)

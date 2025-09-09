@@ -61,7 +61,7 @@ def get_qini(
     treatment_col="w",
     treatment_effect_col="tau",
     normalize=False,
-    random_seed=42,
+    random_seed=42
 ):
     """Get Qini of model estimates in population.
 
@@ -123,22 +123,22 @@ def get_qini(
                 * sorted_df["cumsum_tr"]
             )
         else:
-            # When treatment_effect_col is not given, use outcome_col and treatment_col
-            # to calculate the average treatment_effects of cumulative population.
+            # 使用观测 outcome/treatment 计算
             sorted_df["cumsum_ct"] = sorted_df.index.values - sorted_df["cumsum_tr"]
-            sorted_df["cumsum_y_tr"] = (
-                sorted_df[outcome_col] * sorted_df[treatment_col]
-            ).cumsum()
-            sorted_df["cumsum_y_ct"] = (
-                sorted_df[outcome_col] * (1 - sorted_df[treatment_col])
-            ).cumsum()
-
-            l = (
-                sorted_df["cumsum_y_tr"]
-                - sorted_df["cumsum_y_ct"]
-                * sorted_df["cumsum_tr"]
-                / sorted_df["cumsum_ct"]
-            )
+            # 统一为 float ndarray 进行数值稳定计算
+            y = sorted_df[outcome_col].to_numpy(dtype=float)
+            tr = sorted_df[treatment_col].to_numpy(dtype=float)
+            cumsum_tr = tr.cumsum()
+            cumsum_ct = (1.0 - tr).cumsum()  # 等价于上面的 index - cumsum_tr，但数值上更直观
+            cumsum_y_tr = (y * tr).cumsum()
+            cumsum_y_ct = (y * (1.0 - tr)).cumsum()
+            # 掩码：仅在 cumsum_ct > 0 的位置才除法，否则令该项为 0
+            denom = cumsum_ct
+            num = cumsum_y_ct * cumsum_tr
+            ratio = np.zeros_like(denom, dtype=float)
+            mask = denom > 0
+            ratio[mask] = num[mask] / denom[mask]
+            l = pd.Series(cumsum_y_tr - ratio, index=sorted_df.index, name=col)
 
         qini.append(l)
 
@@ -150,6 +150,12 @@ def get_qini(
 
     if normalize:
         qini = qini.div(np.abs(qini.iloc[-1, :]), axis=1)
+
+    for top_frac in [0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9]:
+        max_idx = int(np.ceil(qini.index.max() * top_frac))
+        tmp = qini.loc[qini.index <= max_idx]
+        print(f'头部{top_frac*100}% qini结果:-------------')
+        print(tmp.sum(axis=0).sort_values(ascending=False))
 
     return qini
 
@@ -166,21 +172,15 @@ def evaluate(df=None,y_true=None,uplift_predictions=None,treatment=None,divide_f
         divide_features = sorted(df[divide_feature].unique().tolist())
         print(divide_features)
 
-        model_res = []
         for each in divide_features:
-            print(each)
+            print('----------'+each+'----------')
             df_tmp = df[df[divide_feature] == each]
             del df_tmp[divide_feature]
             
             sm_qini_auc_score_model = get_qini(df_tmp,outcome_col=y_true,treatment_col=treatment)
+            print('qini结果:')
             print(sm_qini_auc_score_model.sum(axis=0).sort_values(ascending=False))
-            plot_qini(df,outcome_col=y_true,treatment_col=treatment,n=n)
-            print('---------------------------------')
-            model_res.append(sm_qini_auc_score_model.sum(axis=0).sort_values(ascending=False)) 
-        
-        df = pd.DataFrame(model_res)
-        mean_series = df.mean()
-        print(f'平均结果:{mean_series}')
+            plot_qini(df_tmp,outcome_col=y_true,treatment_col=treatment,n=n)
 
 def feature_importance_with_shap(model,df_train,df_test,feature_list,feature_list_discrete,device,treatment):
     X_train = df_train[feature_list_discrete + [_ for _ in feature_list if _ not in feature_list_discrete]].values

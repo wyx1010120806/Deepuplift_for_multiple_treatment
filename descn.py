@@ -128,7 +128,7 @@ class Descn(BaseModel):
         # ipw (batch_size,treatment_nums)
         return torch.cat(ite, dim=1),[pre,pseudo,ipw],None
 
-def descn_loss(y_preds,t, y_true,task='classification',loss_type=None,classi_nums=2, treatment_label_list=None):
+def descn_loss(y_preds,t, y_true,task='classification',loss_type=None,classi_nums=2, treatment_label_list=None,X_true=None):
     if task is None:
         raise ValueError("task must be 'classification'")
 

@@ -13,6 +13,7 @@
     - `1, 2, ..., n`表示不同treatment组
 示例：`treatment_label_list=[0,1,2,3]`
   - 模型会直接输出ITE,前序传播输出的第一个参数即为ITE,使用list存储，每一个索引位置对应treatment_label_list中索引相应的treatment的预估lift
+  - 目标变量目前仅支持连续性和二分类离散型
 - 使用示例
   - main.ipynb：为训练示例，包含数据预处理、模型训练、模型评估等步骤
   - evaluate.ipynb：为模型评估示例，包含模型在测试集上的评估指标计算等步骤，多treatment评估结果

@@ -70,9 +70,33 @@ class Tarnet(BaseModel):
                 predcit_pro = self.treatment_model[str(treatment_label)](share_out).squeeze().unsqueeze(1)
                 if treatment_label != 0:
                     ate.append(predcit_pro -base_predcit_pro)
-        return torch.cat(ate, dim=1) if len(ate) !=0 else None,pre,None
+        return torch.cat(ate, dim=1) if len(ate) !=0 else None,pre,share_out
 
-def tarnet_loss(y_preds,t, y_true,task='regression',loss_type=None,classi_nums=2, treatment_label_list=None,X_true=None):
+def gaussian_kernel(x, y, sigma=1.0):
+    """
+    计算RBF核矩阵
+    x: [n, d]
+    y: [m, d]
+    """
+    x = x.unsqueeze(1)  # [n, 1, d]
+    y = y.unsqueeze(0)  # [1, m, d]
+    diff = x - y        # [n, m, d]
+    dist_sq = (diff ** 2).sum(-1)  # [n, m]
+    return torch.exp(-dist_sq / (2 * sigma ** 2))
+
+def mmd_rbf(x, y, sigma=1.0):
+    """
+    计算两个样本集合x和y的MMD^2（RBF核）
+    x: [n, d]
+    y: [m, d]
+    """
+    K_xx = gaussian_kernel(x, x, sigma)
+    K_yy = gaussian_kernel(y, y, sigma)
+    K_xy = gaussian_kernel(x, y, sigma)
+    mmd = K_xx.mean() + K_yy.mean() - 2 * K_xy.mean()
+    return mmd
+
+def cfrnet_loss(y_preds,t, y_true,task='regression',loss_type=None,classi_nums=2, treatment_label_list=None,X_true=None):
     if task is None:
         raise ValueError("task must be 'classification' or 'regression'")
 
@@ -82,11 +106,13 @@ def tarnet_loss(y_preds,t, y_true,task='regression',loss_type=None,classi_nums=2
 
     y_true_dict = {}
     y_pred_dict = {}
+    x_true_dict = {}
     for treatment in treatment_label_list:
         mask = (t == treatment)
         y_true_dict[treatment] = y_true[mask]
         y_pred_dict[treatment] = y_pred[mask]
-
+        x_true_dict[treatment] = X_true[mask]
+        
     # 计算每个treatment的损失
     if task == 'classification':
         if loss_type == 'BCEWithLogitsLoss':
@@ -108,7 +134,13 @@ def tarnet_loss(y_preds,t, y_true,task='regression',loss_type=None,classi_nums=2
     loss_treat = 0
     for treatment in treatment_label_list:
         loss_treat += criterion(y_pred_dict[treatment], y_true_dict[treatment])
-    loss = loss_treat
+
+    loss_mmd = 0
+    for treatment in treatment_label_list:
+        if treatment!= 0:
+            loss_mmd += mmd_rbf(x_true_dict[treatment], x_true_dict[0])
+
+    loss = loss_treat + loss_mmd
     return loss, loss_treat, None
 
 
