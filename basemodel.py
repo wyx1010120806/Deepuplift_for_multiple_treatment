@@ -44,7 +44,7 @@ class BaseModel(nn.Module):
 
     def save_checkpoint(self,model, optimizer, epoch, filepath='checkpoint.pth'):
         base, ext = filepath.rsplit('.', 1)  # 分割文件名和扩展名
-        new_filepath = f"{base}_{epoch}.{ext}"
+        new_filepath = f"{base}.{ext}"
 
         torch.save({
             'epoch': epoch,

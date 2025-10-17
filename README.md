@@ -1,12 +1,13 @@
 - 项目概述
-基于https://github.com/Zhuang-Zhuang-Liu/DeepUplift/tree/main，
-扩展了多treatment训练支持及特征选择、embedding等模块，支持以下模型：
-  - T-learner（已实现）
-  - S-learner（已实现）
-  - X-learner（已实现）
-  - Tarnet（已实现）
-  - ESN+Tarnet（已实现）
-  - DESCN（已实现）
+基于深度学习的多treatment训练支持及特征选择、embedding等模块，支持以下模型：
+  - T-learner
+  - S-learner
+  - X-learner
+  - Tarnet
+  - ESN+Tarnet
+  - DESCN
+  - Cfrnet
+  - Dragonnet
 - 使用注意事项
   - 模型初始化：必须传入`treatment_label_list`参数（类型为`list`），用于定义treatment标签。其中：
     - `0`表示控制组

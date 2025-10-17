@@ -166,8 +166,7 @@ def evaluate(df=None,y_true=None,uplift_predictions=None,treatment=None,divide_f
         print(sm_qini_auc_score_model.sum(axis=0).sort_values(ascending=False))
 
         plot_qini(df,outcome_col=y_true,treatment_col=treatment,n=n)
-
-     
+        return sm_qini_auc_score_model.sum(axis=0).sort_values(ascending=False)
     else:
         divide_features = sorted(df[divide_feature].unique().tolist())
         print(divide_features)
