@@ -3,13 +3,13 @@ import torch
 from basemodel import BaseModel
 from baseunit import TowerUnit
 
-class Tarnet(BaseModel):
+class Cfrnet(BaseModel):
     def __init__(self, input_dim=100,discrete_size_cols=[2,3,4,5,2],embedding_dim=64,share_dim=6,
                  share_hidden_dims =[64,64,64,64,64],
                  base_hidden_dims=[100,100,100,100],output_activation_base=torch.nn.Sigmoid(),
                  share_hidden_func = torch.nn.ELU(),base_hidden_func = torch.nn.ELU(),
                  task = 'classification',classi_nums=2, treatment_label_list=[0,1,2,3],model_type='Tarnet',device='cpu'):
-        super(Tarnet, self).__init__()
+        super(Cfrnet, self).__init__()
         self.model_type = model_type
         self.layers = []
         self.treatment_nums = len(treatment_label_list)

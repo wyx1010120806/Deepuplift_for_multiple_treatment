@@ -48,7 +48,7 @@ class TowerUnit(nn.Module):
             if classi_nums == 2:
                 output_dim , output_activation = 1 , output_activation 
             elif classi_nums > 2:
-                output_dim , output_activation = classi_nums , output_activation 
+                output_dim , output_activation = classi_nums , torch.nn.Softmax(dim=1) 
             else:
                 raise ValueError("classi_nums must be specified for classification task")
         elif task == 'regression':

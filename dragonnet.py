@@ -54,28 +54,28 @@ class Dragonnet(BaseModel):
                  use_xavier=True)
         
         # ipw tower
-        self.ipw_tower = TowerUnit(input_dim = input_dim, 
+        self.ipw_tower = TowerUnit(input_dim = share_dim, 
                  hidden_dims=ipw_hidden_dims, 
                  share_output_dim=None, 
                  activation=ipw_hidden_func, 
                  use_batch_norm=True, 
                  use_dropout=True, 
                  dropout_rate=0.3, 
-                 task=task, 
+                 task='classification', 
                  classi_nums=self.treatment_nums, 
                  output_activation=output_activation_ipw,
                  device=device, 
                  use_xavier=True)
 
         # epsilons tower
-        self.epsilons_tower = TowerUnit(input_dim = input_dim, 
+        self.epsilons_tower = TowerUnit(input_dim = share_dim, 
                  hidden_dims=epsilons_hidden_dims, 
                  share_output_dim=None, 
                  activation=epsilons_hidden_func, 
                  use_batch_norm=True, 
                  use_dropout=True, 
                  dropout_rate=0.3, 
-                 task=task, 
+                 task='regression', 
                  classi_nums=self.treatment_nums, 
                  output_activation=output_activation_epsilons,
                  device=device, 
@@ -97,7 +97,7 @@ class Dragonnet(BaseModel):
 
         pre.append(self.epsilons_tower(share_out).squeeze().unsqueeze(1))
 
-        pre.append(self.ipw_tower(share_out).squeeze().unsqueeze(1))
+        pre.append(self.ipw_tower(share_out))
 
         ate = []
         if not self.training:
@@ -122,11 +122,13 @@ def dragonnet_loss(y_preds,t, y_true,task='regression',loss_type=None,classi_num
     y_pred_dict = {}
     t_pred_dict = {}
     t_true_dict = {}
+    epsilons_dict = {}
     for treatment in treatment_label_list:
         mask = (t == treatment)
         t_true_dict[treatment] = t[mask]
         y_true_dict[treatment] = y_true[mask]
         y_pred_dict[treatment] = y_pred[mask]
+        epsilons_dict[treatment] = epsilons[mask]
         if len(treatment_label_list) == 2:
             if treatment == 0:
                 t_pred_dict[treatment] = 1 - t_pred.squeeze().unsqueeze(1)[mask]
@@ -162,8 +164,8 @@ def dragonnet_loss(y_preds,t, y_true,task='regression',loss_type=None,classi_num
     # loss ipw
     loss_ipw = 0
     if len(treatment_label_list) == 2:
-        ipw_criterion = nn.BCEWithLogitsLoss()
-        loss_ipw = ipw_criterion(t_pred, t)
+        ipw_criterion = nn.BCELoss()
+        loss_ipw = ipw_criterion(t_pred, t.float())
 
     if len(treatment_label_list) > 2: 
         ipw_criterion = nn.CrossEntropyLoss()
@@ -175,16 +177,12 @@ def dragonnet_loss(y_preds,t, y_true,task='regression',loss_type=None,classi_num
         t_pre = (t_pred_dict[treatment] + 0.01) / 1.02
         y_pre = y_pred_dict[treatment]
         t_true = t_true_dict[treatment]
+
         h = t_true / t_pre
-        y_pert = y_pre + epsilons * h
+        y_pert = y_pre + epsilons_dict[treatment] * h
 
         if task == 'classification':
-            if loss_type == 'BCEWithLogitsLoss':
                 criterion = nn.BCEWithLogitsLoss(reduction='sum')
-            elif loss_type =='BCELoss':
-                criterion = nn.BCELoss(reduction='sum')
-            else:
-                raise ValueError("loss_type must be 'BCEWithLogitsLoss' or 'BCELoss'")
         elif task == 'regression':
             if loss_type == 'mse':
                 criterion = nn.MSELoss(reduction='sum')

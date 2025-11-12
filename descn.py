@@ -61,7 +61,7 @@ class Descn(BaseModel):
                  use_batch_norm=True, 
                  use_dropout=True, 
                  dropout_rate=0.3, 
-                 task=task, 
+                 task='classification', 
                  classi_nums=self.treatment_nums, 
                  output_activation=output_activation_ipw,
                  device=device, 
@@ -126,7 +126,7 @@ class Descn(BaseModel):
         # pre [(batch_size,1),(batch_size,1),...]
         # pseudo [[(batch_size,1),(batch_size,1)],...]
         # ipw (batch_size,treatment_nums)
-        return torch.cat(ite, dim=1),[pre,pseudo,ipw],None
+        return torch.cat(ite, dim=1) if len(ite) !=0 else None,[pre,pseudo,ipw],None
 
 def descn_loss(y_preds,t, y_true,task='classification',loss_type=None,classi_nums=2, treatment_label_list=None,X_true=None):
     if task is None:
@@ -164,8 +164,16 @@ def descn_loss(y_preds,t, y_true,task='classification',loss_type=None,classi_num
             criterion = nn.BCELoss()
         else:
             raise ValueError("loss_type must be 'BCEWithLogitsLoss' or 'BCELoss'")
+    elif task == 'regression':
+        if loss_type == 'mse':
+            criterion = nn.MSELoss()
+        elif loss_type =='huberloss':
+            criterion = nn.SmoothL1Loss() 
+        else:
+            raise ValueError("loss_type must be 'mse' or 'huberloss'")
     else:
-        raise ValueError("task must be 'classification'")
+        raise ValueError("task must be 'classification' or'regression'")
+    
     
     loss_treat = 0
     for treatment in treatment_label_list:

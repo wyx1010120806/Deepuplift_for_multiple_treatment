@@ -9,6 +9,10 @@ from torch.optim import lr_scheduler
 import torch
 from torch.utils.data import Dataset
 import random
+import subprocess
+from pathlib import Path
+from urllib.parse import urlparse, urlunparse
+import time
 
 class EarlyStopper:
     def __init__(self, patience=10, min_delta=0):
@@ -41,16 +45,31 @@ class BaseModel(nn.Module):
         torch.backends.cudnn.deterministic = True
         torch.backends.cudnn.benchmark = False
 
+    def run_shell(self,hdfs_ls_cmd):
+        result = subprocess.run(hdfs_ls_cmd, shell=True, capture_output=True, text=True)     
+        if result.returncode != 0:
+            print(f"Error listing files in HDFS: {result.stderr}")
 
-    def save_checkpoint(self,model, optimizer, epoch, filepath='checkpoint.pth'):
-        base, ext = filepath.rsplit('.', 1)  # 分割文件名和扩展名
-        new_filepath = f"{base}_{epoch}.{ext}"
+    def save_checkpoint(self,model, optimizer, epoch, filepath):
+        model_save_name = Path(filepath).name
+
+        p = urlparse(filepath)
+        parent_path = p.path.rsplit('/', 1)[0]  
+        filepath_ = urlunparse((p.scheme, p.netloc, parent_path, '', '', ''))
 
         torch.save({
             'epoch': epoch,
             'model_state_dict': model.state_dict(),
             'optimizer_state_dict': optimizer.state_dict(),
-        }, new_filepath)
+        }, './'+model_save_name)
+
+        if filepath_ == "hdfs://harunasg/home/byte_ecom_product_ds_sg" or filepath_ == "hdfs://harunasg/home/byte_ecom_product_ds_sg/":
+            raise ValueError("严禁使用根目录，请指定更具体的子目录，以免误删")
+
+        self.run_shell(f"hdfs dfs -rm -r {filepath}")
+        self.run_shell(f"hdfs dfs -mkdir {filepath_}")
+        self.run_shell(f"hdfs dfs -put ./{model_save_name} {filepath_}")
+        
 
     def load_checkpoint(self,model, optimizer, filepath='checkpoint.pth', device='cpu'):
         checkpoint = torch.load(filepath, map_location=device)
@@ -77,8 +96,8 @@ class BaseModel(nn.Module):
                 t_test = torch.tensor(df_test[label_treatment].values, dtype=torch.float32).unsqueeze(1)
                 y_test = torch.tensor(df_test[label_y].values, dtype=torch.float32).unsqueeze(1)
 
-                self.train_dataloader = DataLoader(TensorDataset(X_train, t_train, y_train, X_train_discrete, X_train_continuous), batch_size=batch_size, num_workers=num_workers, pin_memory=pin_memory,shuffle=False)
-                self.valid_dataloader = DataLoader(TensorDataset(X_test, t_test, y_test, X_test_discrete, X_test_continuous), batch_size=batch_size, num_workers=num_workers, pin_memory=pin_memory,shuffle=False)
+                self.train_dataloader = DataLoader(TensorDataset(X_train, t_train, y_train, X_train_discrete, X_train_continuous), batch_size=batch_size, num_workers=num_workers, pin_memory=pin_memory,shuffle=False, drop_last=True)
+                self.valid_dataloader = DataLoader(TensorDataset(X_test, t_test, y_test, X_test_discrete, X_test_continuous), batch_size=batch_size, num_workers=num_workers, pin_memory=pin_memory,shuffle=False, drop_last=True)
                 print("预计单epoch训练步数:",int(df_train.shape[0]/batch_size))
             else:
                 X_discrete = torch.tensor(df[discrete_cols].values, dtype=torch.float32)
@@ -89,11 +108,11 @@ class BaseModel(nn.Module):
 
                 dataset = TensorDataset(X, t, y,X_discrete,X_continuous)
                 
-                self.train_dataloader = DataLoader(dataset, batch_size=batch_size, num_workers=num_workers, pin_memory=pin_memory,shuffle=False)
+                self.train_dataloader = DataLoader(dataset, batch_size=batch_size, num_workers=num_workers, pin_memory=pin_memory,shuffle=False, drop_last=True)
                 print("预计单epoch训练步数:",int(df.shape[0]/batch_size))
 
     def fit(self, df,feature_list,discrete_cols,batch_size=64, epochs=10,
-            learning_rate=1e-5,uplift_loss_f=None,loss_f=None,loss_f_eps=(), tensorboard=False,num_workers=4,pin_memory=True,task=None,device=None, valid_perc=False,label_y=None,label_treatment=None,loss_type=None,classi_nums=2, treatment_label_list=None,checkpoint_path=None,if_continued_train=0
+            learning_rate=1e-5,uplift_loss_f=None,loss_f=None,loss_f_eps=(), tensorboard=False,num_workers=4,pin_memory=True,task=None,device=None, valid_perc=False,label_y=None,label_treatment=None,loss_type=None,classi_nums=2, treatment_label_list=None,checkpoint_path=None,if_continued_train=0, max_runtime_hours=23.5
             ):
 
         self.set_seed(42)
@@ -112,9 +131,13 @@ class BaseModel(nn.Module):
         early_stopper = EarlyStopper(patience=10, min_delta=0)
         # scheduler = lr_scheduler.ReduceLROnPlateau(optim, mode='min', patience=5, factor=0.1, verbose=True)
 
+        # 记录训练开始时间
+        import time
+        train_start = time.time()
+        max_runtime_seconds = max_runtime_hours * 3600
+
         for epoch in range(epochs):
             import time
-            torch.cuda.synchronize()
             start_time = time.time()
             loss_ = []
             for batch, (X, tr, y1, X_discrete, X_continuous) in enumerate(self.train_dataloader):
@@ -199,6 +222,13 @@ class BaseModel(nn.Module):
             # start_time = time.time()
             self.save_checkpoint(model, optim, epoch, checkpoint_path)
             print(f"epoch: {epoch} time: {time.time() - start_time:.4f}s")
+
+            # 运行时长检查
+            import time
+            elapsed = time.time() - train_start
+            if elapsed >= max_runtime_seconds:
+                print(f"[Time Limit] 已运行 {elapsed/3600:.2f} 小时，达到上限 {max_runtime_hours} 小时，结束训练。")
+                break
 
     def predict(self, x,tr=None,device=None,X_discrete=None, X_continuous=None):
         model = self.eval()

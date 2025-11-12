@@ -6,8 +6,11 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import roc_auc_score
 from sklearn.metrics import mean_squared_error, r2_score
 
-def features_select(df=None,features=None,label=None,n_top=None,selected_path=None,task='classification'):
-    df_train, df_test = train_test_split(df, test_size=0.3, random_state=42)
+def features_select(df=None,df_test=None,features=None,label=None,n_top=None,task='classification'):
+    if df_test is not None:
+        df_train, df_test = df,df_test
+    else:
+        df_train, df_test = train_test_split(df, test_size=0.3, random_state=42)
 
     if task=='classification':
         # 2. 训练原始模型（使用全部特征）
@@ -22,8 +25,6 @@ def features_select(df=None,features=None,label=None,n_top=None,selected_path=No
         # 4. 计算特征重要性
         importance = model_full.feature_importances_
         importance_df = pd.DataFrame({'feature': features, 'importance': importance})
-        print(importance_df.shape)
-        importance_df = importance_df[importance_df['importance'] > 0]
         print(importance_df.shape)
         importance_df = importance_df.sort_values(by='importance', ascending=False)
         top_features = importance_df['feature'].head(n_top).tolist()
@@ -54,8 +55,6 @@ def features_select(df=None,features=None,label=None,n_top=None,selected_path=No
             importance = model_full.feature_importances_
             importance_df = pd.DataFrame({'feature': features, 'importance': importance})
             print(importance_df.shape)
-            importance_df = importance_df[importance_df['importance'] > 0]
-            print(importance_df.shape)
             importance_df = importance_df.sort_values(by='importance', ascending=False)
             top_features = importance_df['feature'].head(n_top).tolist()
             print(len(top_features))
@@ -74,10 +73,10 @@ def features_select(df=None,features=None,label=None,n_top=None,selected_path=No
         else:
             raise ValueError("task must be 'classification' or'regression'")
 
-    import pickle
-    # 将列表保存到文件
-    with open(selected_path, 'wb') as f:
-        pickle.dump(top_features, f)
+    # import pickle
+    # # 将列表保存到文件
+    # with open(selected_path, 'wb') as f:
+    #     pickle.dump(top_features, f)
 
     discrete_size_cols = []
     feature_list_discrete = []
@@ -90,17 +89,17 @@ def features_select(df=None,features=None,label=None,n_top=None,selected_path=No
                 feature_list_discrete.append(each)
     print(len(feature_list_discrete))
 
-    import pickle
-    # 将列表保存到文件
-    print('/mlx_devbox/users/wangyuxin.huoshan/playground/bonus_train_data/' + os.path.basename(selected_path).split('.')[0] + '_discrete.pkl')
-    with open('/mlx_devbox/users/wangyuxin.huoshan/playground/bonus_train_data/' + os.path.basename(selected_path).split('.')[0] + '_discrete.pkl', 'wb') as f:
-        pickle.dump(feature_list_discrete, f)
+    # import pickle
+    # # 将列表保存到文件
+    # print('./' + os.path.basename(selected_path).split('.')[0] + '_discrete.pkl')
+    # with open('./' + os.path.basename(selected_path).split('.')[0] + '_discrete.pkl', 'wb') as f:
+    #     pickle.dump(feature_list_discrete, f)
 
-    print('/mlx_devbox/users/wangyuxin.huoshan/playground/bonus_train_data/' + os.path.basename(selected_path).split('.')[0] + '_discrete_size.pkl')
-    with open('/mlx_devbox/users/wangyuxin.huoshan/playground/bonus_train_data/' + os.path.basename(selected_path).split('.')[0] + '_discrete_size.pkl', 'wb') as f:
-        pickle.dump(discrete_size_cols, f)
+    # print('./' + os.path.basename(selected_path).split('.')[0] + '_discrete_size.pkl')
+    # with open('./' + os.path.basename(selected_path).split('.')[0] + '_discrete_size.pkl', 'wb') as f:
+    #     pickle.dump(discrete_size_cols, f)
 
-    return top_features
+    return top_features,feature_list_discrete,discrete_size_cols
 
     
     

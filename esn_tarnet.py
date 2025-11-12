@@ -59,7 +59,7 @@ class ESN_Tarnet(BaseModel):
                  use_batch_norm=True, 
                  use_dropout=True, 
                  dropout_rate=0.3, 
-                 task=task, 
+                 task='classification', 
                  classi_nums=self.treatment_nums, 
                  output_activation=output_activation_ipw,
                  device=device, 
@@ -93,7 +93,7 @@ class ESN_Tarnet(BaseModel):
             if treatment_label != 0:
                 ate.append(predcit_pro -base_predcit_pro)
         pre.append(ipw)
-        return torch.cat(ate, dim=1),pre,None
+        return torch.cat(ate, dim=1) if len(ate) !=0 else None,pre,None
 
 def esn_tarnet_loss(y_preds,t, y_true,task='classification',loss_type=None,classi_nums=2, treatment_label_list=None,X_true=None):
     if task is None:
@@ -129,8 +129,16 @@ def esn_tarnet_loss(y_preds,t, y_true,task='classification',loss_type=None,class
             criterion = nn.BCELoss()
         else:
             raise ValueError("loss_type must be 'BCEWithLogitsLoss' or 'BCELoss'")
+    elif task == 'regression':
+        if loss_type == 'mse':
+            criterion = nn.MSELoss()
+        elif loss_type =='huberloss':
+            criterion = nn.SmoothL1Loss() 
+        else:
+            raise ValueError("loss_type must be 'mse' or 'huberloss'")
     else:
-        raise ValueError("task must be 'classification'")
+        raise ValueError("task must be 'classification' or'regression'")
+    
     
     loss_treat = 0
     for treatment in treatment_label_list:

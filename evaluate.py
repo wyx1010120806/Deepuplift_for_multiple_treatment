@@ -1,18 +1,11 @@
-from pylift.eval import UpliftEval,get_scores
 import pandas as pd
 import numpy as np
-from sklift.metrics import qini_auc_score,uplift_at_k
-from sklearn.metrics import roc_auc_score
 import torch
 import shap
 import random
 from causalml.metrics import qini_score,plot_qini
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
-from sklearn.metrics import roc_auc_score, confusion_matrix, roc_curve
-
 
 class MyModelWrapper(torch.nn.Module):
         def __init__(self, model, feature_list_discrete, device, treatment):
@@ -151,11 +144,50 @@ def get_qini(
     if normalize:
         qini = qini.div(np.abs(qini.iloc[-1, :]), axis=1)
 
-    for top_frac in [0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9]:
-        max_idx = int(np.ceil(qini.index.max() * top_frac))
-        tmp = qini.loc[qini.index <= max_idx]
-        print(f'头部{top_frac*100}% qini结果:-------------')
-        print(tmp.sum(axis=0).sort_values(ascending=False))
+    # result = {}
+    # for top_frac in range(1, 101):
+    #     top_frac = top_frac / 100.0
+    #     max_idx = int(np.ceil(qini.index.max() * top_frac))
+    #     tmp = qini.loc[qini.index <= max_idx]
+    #     res = tmp.sum(axis=0).to_dict()
+    #     for k,v in res.items():
+    #         if k not in result.keys():
+    #             result[k] = []
+    #         else:
+    #             result[k].append(float(v))
+
+    # def top_n_rising_indices(arr, n=3):
+    #     """
+    #     返回在上涨点集合中(arr[i] > arr[i-1]）按值从大到小排序的前 n 个原始索引。
+    #     若上涨点少于 n 个，则返回全部上涨点（按值降序）。
+    #     """
+    #     arr = np.asarray(arr, dtype=float)
+    #     if len(arr) < 2:
+    #         return np.array([], dtype=int)
+
+    #     # 找上涨位置 i：当前值大于前一个值
+    #     rising_idx = np.where(np.diff(arr) > 0)[0] + 1
+    #     if rising_idx.size == 0:
+    #         return np.array([], dtype=int)
+
+    #     # 对上涨位置的值降序排序，取前 n
+    #     vals = arr[rising_idx]
+    #     order = np.argsort(vals)[::-1]     # 降序
+    #     top_order = order[:n]
+    #     top_indices = rising_idx[top_order]
+
+    #     # 若需要按“值从大到小、同值按索引从小到大”排序，可再稳定排序一次：
+    #     # top_indices = top_indices[np.argsort(arr[top_indices], kind="stable")[::-1]]
+
+    #     return top_indices.astype(int)
+
+    # def top_n_rising_indices_and_values(arr, n=1):
+    #     idx = top_n_rising_indices(arr, n=n)
+    #     arr = np.asarray(arr, dtype=float)
+    #     return idx, arr[idx]
+
+    # for k,v in result.items():
+    #     print(f"{k}模型建议划分头部{top_n_rising_indices_and_values(v)[0]+1}%为目标人群")
 
     return qini
 
@@ -166,8 +198,7 @@ def evaluate(df=None,y_true=None,uplift_predictions=None,treatment=None,divide_f
         print(sm_qini_auc_score_model.sum(axis=0).sort_values(ascending=False))
 
         plot_qini(df,outcome_col=y_true,treatment_col=treatment,n=n)
-
-     
+        return sm_qini_auc_score_model.sum(axis=0).sort_values(ascending=False)
     else:
         divide_features = sorted(df[divide_feature].unique().tolist())
         print(divide_features)
@@ -178,7 +209,7 @@ def evaluate(df=None,y_true=None,uplift_predictions=None,treatment=None,divide_f
             del df_tmp[divide_feature]
             
             sm_qini_auc_score_model = get_qini(df_tmp,outcome_col=y_true,treatment_col=treatment)
-            print('qini结果:')
+            print('最终整体qini结果:-------------')
             print(sm_qini_auc_score_model.sum(axis=0).sort_values(ascending=False))
             plot_qini(df_tmp,outcome_col=y_true,treatment_col=treatment,n=n)
 
@@ -189,7 +220,7 @@ def feature_importance_with_shap(model,df_train,df_test,feature_list,feature_lis
     my_model = MyModelWrapper(model, feature_list_discrete, device, treatment)
     background = torch.tensor(X_train, dtype=torch.float32)
     explainer = shap.GradientExplainer(my_model, background)
-    shap_values = explainer.shap_values(torch.tensor(X_test, dtype=torch.float32))
+    shap_values = explainer.shap_values(torch.tensor(X_test, dtype=torch.float32)).squeeze(-1) 
     shap.summary_plot(
         shap_values,         # 解释结果
         X_test,              # 原始输入数据

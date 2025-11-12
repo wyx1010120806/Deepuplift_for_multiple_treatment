@@ -60,7 +60,7 @@ class Slearner(BaseModel):
             for i in range(1,len(self.treatment_label_list)):
                 ate.append(pre[i] - pre[0])
 
-        return torch.cat(ate, dim=1),predcit_pro,None
+        return torch.cat(ate, dim=1) if len(ate) !=0 else None,predcit_pro,None
 
 def slearn_loss(y_preds,t, y_true,task='regression',loss_type=None,classi_nums=2, treatment_label_list=None,X_true=None):
     if task is None:
