@@ -50,12 +50,18 @@ class BaseModel(nn.Module):
         if result.returncode != 0:
             print(f"Error listing files in HDFS: {result.stderr}")
 
+<<<<<<< HEAD
     def save_checkpoint(self,model, optimizer, epoch, filepath):
         model_save_name = Path(filepath).name
 
         p = urlparse(filepath)
         parent_path = p.path.rsplit('/', 1)[0]  
         filepath_ = urlunparse((p.scheme, p.netloc, parent_path, '', '', ''))
+=======
+    def save_checkpoint(self,model, optimizer, epoch, filepath='checkpoint.pth'):
+        base, ext = filepath.rsplit('.', 1)  # 分割文件名和扩展名
+        new_filepath = f"{base}.{ext}"
+>>>>>>> 826c247f38bae0757a3143a60e371439b65cb42c
 
         torch.save({
             'epoch': epoch,

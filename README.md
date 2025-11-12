@@ -8,6 +8,11 @@
   - DESCN
   - Cfrnet
   - Dragonnet
+<<<<<<< HEAD
+=======
+  - UpliftTree
+  - UpliftForest
+>>>>>>> 826c247f38bae0757a3143a60e371439b65cb42c
 - 使用注意事项
   - 模型初始化：必须传入`treatment_label_list`参数（类型为`list`），用于定义treatment标签。其中：
     - `0`表示控制组
